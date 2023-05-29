@@ -36,6 +36,9 @@ LOG_LEVEL = 'Log level.'
 MIN_HEIGHT = (
     'Minimum height/resolution to accept, 0 means no resolution filtering.'
 )
+LIVE_ONLY = (
+    'Filter channels with a static stream.'
+)
 OUTPUT = 'Output file name.'
 REPLACE_GROUP_BY_SOURCE = (
     'Flag to replace the group title with the source name, where the source '

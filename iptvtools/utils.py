@@ -15,11 +15,15 @@ from subprocess import PIPE  # noqa: S404
 from subprocess import Popen  # noqa: S404
 from subprocess import TimeoutExpired  # noqa: S404
 from urllib.parse import urlparse
+from time import sleep
 
 import requests
 
 from iptvtools.config import Config
 
+FRAME_COMMAND = (
+    'ffmpeg -loglevel quiet -vframes 1 -q:v 2 -ss 00:00:5 -f mjpeg pipe:1 -i ' # -i {URL}
+)
 
 PROBE_COMMAND = (
     'ffprobe -hide_banner -show_streams -select_streams v '
@@ -78,6 +82,43 @@ def probe(url, timeout=None):
         except json.JSONDecodeError as exc:
             logging.error(exc)
     return None
+
+
+def frame_md5(url, timeout=None):
+    """Invoke probe to get stream information."""
+    outs = None
+    
+    c_ffmpeg = f'ffmpeg -loglevel quiet -i {url} -vframes 1 -q:v 2 -ss 00:00:05 -f mjpeg -y md5:'
+    logging.debug(c_ffmpeg)
+
+    with Popen(
+            c_ffmpeg.split(),
+            stdout=PIPE, stderr=PIPE) as p_ffmpeg:
+        try:
+            outs, _ = p_ffmpeg.communicate(timeout=timeout)
+        except TimeoutExpired:
+            logging.debug(f"TIMEOUT reached for '{c_ffmpeg}'")
+            p_ffmpeg.kill()
+
+    return outs
+
+
+def check_live(url, timeout=None):
+    """Check for the live stream and return True."""
+    frame1_md5 = frame_md5(url, timeout)
+
+    logging.debug(f'MD5 Frame 1: {frame1_md5}')
+    if frame1_md5 == None:
+        return None
+
+    sleep(2)
+
+    frame2_md5 = frame_md5(url, timeout)
+    logging.debug(f'MD5 Frame 2: {frame2_md5}')
+    if frame2_md5 == None:
+        return None
+
+    return (frame1_md5 != frame2_md5)
 
 
 def check_stream(url, timeout=None):

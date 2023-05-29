@@ -29,6 +29,8 @@ def parse_args():
     parser.add_argument('--group-include', help=helps.GROUP_INCLUDE)
     parser.add_argument('--min-height', default=defaults.MIN_HEIGHT, type=int,
                         help=helps.MIN_HEIGHT)
+    parser.add_argument('-l', '--live-only', action='store_true',
+                        help=helps.LIVE_ONLY)
     parser.add_argument('-c', '--config', default=defaults.CONFIG,
                         help=helps.CONFIG)
     parser.add_argument('-i', '--inputs', nargs='*', default=defaults.INPUTS,
@@ -68,6 +70,11 @@ def main():
         if shutil.which('ffprobe') is None:
             raise exceptions.FFmpegNotInstalledError()
 
+    if args.live_only:
+        if shutil.which('ffmpeg') is None:
+            raise exceptions.FFmpegNotInstalledError()
+
+
     Config.init(args.config)
     playlist = Playlist(args)
     playlist.parse()
@@ -79,6 +86,9 @@ def main():
     if playlist.poor_urls:
         logging.info('Poor resolution Urls:')
         logging.info('\n'.join(sorted(playlist.poor_urls)))
+    if playlist.static_urls:
+        logging.info('Static stream Urls:')
+        logging.info('\n'.join(sorted(playlist.static_urls)))
 
 
 if __name__ == '__main__':

@@ -31,6 +31,7 @@ class Playlist():
         self.id_url = {}
         self.inaccessible_urls = set()
         self.poor_urls = set()
+        self.static_urls = set()
         self.tvg_url = None
 
     def export(self):
@@ -41,7 +42,7 @@ class Playlist():
             res[0] += f' x-tvg-url="{self.tvg_url}"'
         for url in sorted(self.data, key=self.__custom_sort):
 
-            if url in self.inaccessible_urls or url in self.poor_urls:
+            if url in self.inaccessible_urls or url in self.poor_urls or url in self.static_urls:
                 continue
 
             entry = self.data[url]
@@ -160,6 +161,16 @@ class Playlist():
             elif not utils.check_connectivity(url, self.args.timeout):
                 self.inaccessible_urls.add(url)
                 status = 'Inaccessible (No connectivity)'
+            
+            if status == 'OK' and self.args.live_only:
+                is_live = utils.check_live(url, self.args.timeout)
+                if is_live == None:
+                    self.inaccessible_urls.add(url)
+                    status = 'Inaccessible (No connectivity)'
+                elif is_live == False:
+                    self.static_urls.add(url)
+                    status = 'Static stream'
+
             pbar.write(f'{url}, {status}!')
 
     def __custom_sort(self, url):
@@ -172,9 +183,9 @@ class Playlist():
             elif key == 'title':
                 res.append(entry.get(key, ''))
             elif key == 'tvg-id':
-                res.append(int(re.sub("\D", "", entry['params'].get(key)) or sys.maxsize))
+                res.append(int(re.sub("\D", "", entry['params'].get(key, f"{sys.maxsize}")) or sys.maxsize))
             elif key == 'template-order':
-                res.append(int(entry['params'].get(key) or sys.maxsize))
+                res.append(int(entry['params'].get(key, sys.maxsize) or sys.maxsize))
             elif key == 'group-title':
-                res.append(entry['params'].get(key) or '')
+                res.append(entry['params'].get(key, '') or '')
         return res
